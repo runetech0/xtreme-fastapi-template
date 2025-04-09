@@ -1,0 +1,14 @@
+aiohttp
+motor
+fastapi
+gunicorn
+uvicorn
+python-dotenv
+beautifulsoup4
+httpx
+aiofiles
+beanie
+pydantic[email]
+passlib
+PyJWT
+bcrypt
