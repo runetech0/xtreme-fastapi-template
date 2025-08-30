@@ -1,13 +1,14 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict
-from passlib.context import CryptContext
+
 import jwt
 from fastapi import Depends, HTTPException, Security
 from fastapi.security import OAuth2PasswordBearer
-from .env_reader import EnvReader
-from .db.user import User
-from app.settings import JWT_PROCESSING_ALGORITHM
+from passlib.context import CryptContext
 
+from app.settings import JWT_PROCESSING_ALGORITHM
+from db_handles.user import User
+
+from .env_reader import EnvReader
 
 # Password hashing
 pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -27,17 +28,17 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(
-    data: Dict[str, str | int], expires_delta_days: Optional[timedelta] = None
+    data: dict[str, str | int], expires_delta_days: timedelta | None = None
 ) -> str:
     """Generate a JWT token"""
-    to_encode: Dict[str, str | int] = data.copy()
+    to_encode: dict[str, str | int] = data.copy()
     expire: datetime = datetime.now(timezone.utc) + (
         expires_delta_days or timedelta(days=EnvReader.ACCESS_TOKEN_EXPIRES_DAYS)
     )
     to_encode.update({"exp": int(expire.timestamp())})
 
     return str(
-        jwt.encode(
+        jwt.encode(  # type: ignore
             to_encode, EnvReader.JWT_SECRET_KEY, algorithm=JWT_PROCESSING_ALGORITHM
         )
     )
@@ -46,20 +47,19 @@ def create_access_token(
 async def get_current_user(token: str = Security(oauth2_scheme)) -> User:
     """Decode JWT and return authenticated user"""
     try:
-        payload: Dict[str, str] = jwt.decode(
+        payload: dict[str, str] = jwt.decode(  # type: ignore
             token, EnvReader.JWT_SECRET_KEY, algorithms=[JWT_PROCESSING_ALGORITHM]
         )
-        user_id: Optional[str] = payload.get("user_id")  # Extract `user_id`
-        if user_id is None:
+        user_id = payload.get("user_id")  # Extract `user_id`
+        if not user_id:
             raise HTTPException(status_code=401, detail="Not Logged-in")
-        user: Optional[User] = await User.find_one(
-            User.user_id == user_id, projection_model=User
-        )  # Query by `user_id`
-        if user is None:
+
+        user = await User.get_by_id(int(user_id))
+        if not user:
             raise HTTPException(status_code=401, detail="User not found")
         return user
-    except jwt.PyJWTError:
 
+    except jwt.PyJWTError:
         raise HTTPException(status_code=401, detail="Invalid Login Token")
 
 

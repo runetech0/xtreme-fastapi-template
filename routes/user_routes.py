@@ -1,10 +1,12 @@
 import os
-from uuid import uuid4
-from fastapi import APIRouter, File, HTTPException, Depends, UploadFile, status
 from typing import Dict
+from uuid import uuid4
+
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+
 from app.auth_service import get_current_user, hash_password, verify_password
 from app.types import GeneralDict
-from app.db.user import User
+from db_handles.user import User
 from models.user import (
     ActivityLog,
     DeleteUserRequest,
@@ -19,10 +21,8 @@ user_router: APIRouter = APIRouter(prefix="/user", tags=["User"])
 @user_router.get("/settings", response_model=UserSettings)
 async def get_settings(user: User = Depends(get_current_user)) -> UserSettings:
     """Retrieve user settings"""
-    if not user.settings:
-        user.settings = UserSettings()
-        await user.save()
-    return user.settings
+    await user.get_settings()
+    return UserSettings()
 
 
 @user_router.put("/settings", status_code=status.HTTP_200_OK)
@@ -30,21 +30,14 @@ async def update_settings(
     new_settings: UserSettings, user: User = Depends(get_current_user)
 ) -> Dict[str, str]:
     """Update user settings"""
-    user.settings = new_settings
-    await user.save()
+    await user.update_settings(**new_settings.model_dump())
     return {"message": "Settings updated successfully"}
 
 
 @user_router.get("/profile", response_model=UserPublic)
 async def get_profile(user: User = Depends(get_current_user)) -> UserPublic:
     """Get user profile (full name & email)"""
-    return UserPublic(
-        user_id=user.user_id,
-        email=user.email,
-        full_name=user.full_name,
-        is_admin=user.is_admin,
-        created_at=user.created_at,
-    )
+    return user.public_version()
 
 
 @user_router.put("/change-password/", status_code=status.HTTP_200_OK)
@@ -52,11 +45,11 @@ async def change_password(
     old_password: str, new_password: str, user: User = Depends(get_current_user)
 ) -> Dict[str, str]:
     """Change user password"""
-    if not verify_password(old_password, user.password):
+    if not verify_password(old_password, user.hashed_password):
         raise HTTPException(status_code=400, detail="Incorrect old password")
 
-    user.password = hash_password(new_password)
-    await user.save()
+    user.hashed_password = hash_password(new_password)
+    await user.update_settings(hashed_password=user.hashed_password)
     return {"message": "Password updated successfully"}
 
 

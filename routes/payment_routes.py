@@ -1,20 +1,22 @@
 import json
 from typing import Any
+
 import httpx
 from fastapi import APIRouter, Depends, HTTPException, Request
-from app.env_reader import EnvReader
-from app.auth_service import get_current_user
-from app.db.user import User
-from app.db.admin_settings import AdminSettings
 from fastapi.responses import JSONResponse
-from models.payment import PaymentStatusUpdate
-from app.utils import np_signature_check
+
+from app.auth_service import get_current_user
+from app.env_reader import EnvReader
 from app.logger import logger
 from app.settings import (
     NOWPAYMENTS_API_BASE,
     NOWPAYMENTS_FEE_PAID_BY_USER,
     NOWPAYMENTS_PAYMENT_CURRENCY,
 )
+from app.utils import np_signature_check
+from db_handles.admin_settings import AdminSettings
+from db_handles.user import User
+from models.payment import PaymentStatusUpdate
 
 payments_router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -30,7 +32,7 @@ async def create_payment(user: User = Depends(get_current_user)) -> dict[str, An
         logger.debug("NOWPayments API key not set")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-    admin_settings = await AdminSettings.find_one(projection_model=AdminSettings)
+    admin_settings = await AdminSettings.get_settings()
     if not admin_settings:
         raise HTTPException(
             403, "Payments are not enabled by admin yet! Please try again later!"
@@ -39,11 +41,11 @@ async def create_payment(user: User = Depends(get_current_user)) -> dict[str, An
     payload: dict[str, Any] = {
         "price_amount": 10,
         "price_currency": NOWPAYMENTS_PAYMENT_CURRENCY,
-        "order_id": user.user_id,
-        "order_description": f"Subscription for user {user.user_id}",
-        "ipn_callback_url": f"https://{EnvReader.API_DOMAIN}/payments/{PAYMENT_CONFIRMATION}",
-        "success_url": f"https://{EnvReader.FRONTEND_DOMAIN}/dashboard",
-        "cancel_url": f"https://{EnvReader.FRONTEND_DOMAIN}/dashboard",
+        "order_id": user.id,
+        "order_description": f"Subscription for user {user.id}",
+        "ipn_callback_url": f"https://{EnvReader.BACKEND_HOST}/payments/{PAYMENT_CONFIRMATION}",
+        "success_url": f"https://{EnvReader.FRONTEND_HOST}/dashboard",
+        "cancel_url": f"https://{EnvReader.FRONTEND_HOST}/dashboard",
         "is_fee_paid_by_user": NOWPAYMENTS_FEE_PAID_BY_USER,
     }
     logger.debug(f"Invoice creation payload for NowPayments: {payload}")
@@ -106,20 +108,18 @@ async def handle_payment_webhook(
     logger.debug("Signature check passed")
 
     if payload.payment_status.lower() == "finished":
-
         if not payload.order_id:
             logger.debug(f"Order ID was not found in the payload: {payload}")
             raise HTTPException(
                 status_code=400, detail="Order ID not found in the payload"
             )
 
-        user = await User.find_one(User.user_id == str(payload.order_id))  # type: ignore
+        user = await User.get_by_id(int(payload.order_id))
 
         if user:
             # Activate subscription
             logger.debug(f"Paying user found: {user}")
-            logger.debug(f"Activating the subscription for user: {user.user_id}")
-            await user.save()
+            logger.debug(f"Activating the subscription for user: {user.id}")
             logger.debug(f"User subscription updated: {user}")
 
         else:

@@ -1,21 +1,21 @@
-from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Optional
-from app.db.user import User
+
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.auth_service import (
+    create_access_token,
+    get_current_user,
+    verify_password,
+)
+from db_handles.user import User
 from models.auth import (
     EmailRequest,
     ResetPasswordRequest,
+    Token,
     UserLogin,
     UserSignup,
     VerifyEmailRequest,
-    Token,
 )
-from app.auth_service import (
-    hash_password,
-    verify_password,
-    create_access_token,
-    get_current_user,
-)
-from uuid import uuid4
 
 auth_router: APIRouter = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -23,36 +23,29 @@ auth_router: APIRouter = APIRouter(prefix="/auth", tags=["Authentication"])
 @auth_router.post("/signup/")
 async def signup(user_data: UserSignup) -> Dict[str, str]:
     """Register a new user"""
-    existing_user: Optional[User] = await User.find_one(
-        User.email == user_data.email, projection_model=User
-    )
+    existing_user: Optional[User] = await User.get_by_email(user_data.email)
     if existing_user:
         raise HTTPException(
             status_code=400, detail="User already exists with this email"
         )
 
-    hashed_password: str = hash_password(user_data.password)
-    new_user: User = User(
-        user_id=str(uuid4()),  # Generate a new UUID string
+    await User.create(
         email=user_data.email,
-        password=hashed_password,
-        full_name=user_data.full_name,
+        password=user_data.password,
+        full_name=user_data.full_name or "",
         is_admin=False,
     )
-    await new_user.insert()
     return await login(UserLogin(email=user_data.email, password=user_data.password))
 
 
 @auth_router.post("/login/")
 async def login(user_data: UserLogin) -> Dict[str, str]:
     """Authenticate user and return JWT"""
-    user: Optional[User] = await User.find_one(
-        User.email == user_data.email, projection_model=User
-    )
-    if not user or not verify_password(user_data.password, user.password):
+    user: Optional[User] = await User.get_by_email(user_data.email)
+    if not user or not verify_password(user_data.password, user.hashed_password):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
-    token: str = create_access_token(data={"user_id": user.user_id})
+    token: str = create_access_token(data={"user_id": user.id})
     return {"access_token": token, "token_type": "bearer"}
 
 

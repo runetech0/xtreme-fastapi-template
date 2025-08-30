@@ -1,26 +1,31 @@
-from dotenv import load_dotenv
 import os
+
+from dotenv import load_dotenv
 
 load_dotenv()
 
 
 class EnvReader:
-
-    MONGO_URI: str = os.getenv(
-        "MONGO_DB_URL",
-        "mongodb://localhost:27017",
-    )
-    MONGODB_DB_NAME: str = os.getenv("MONGODB_DB_NAME", "x-db-non-production")
-    FRONTEND_DOMAIN: str = os.getenv("FRONTEND_DOMAIN", "localhost:3000")
-    API_DOMAIN: str = os.getenv("API_DOMAIN", "localhost:8000")
-    NOWPAYMENTS_IPN_KEY = os.getenv("NOWPAYMENTS_IPN_KEY", "")
-    NOWPAYMENTS_API_KEY = os.getenv("NOWPAYMENTS_API_KEY", "")
-
+    FRONTEND_HOST: str = os.getenv("FRONTEND_HOST", "localhost:3000")
+    BACKEND_HOST: str = os.getenv("BACKEND_HOST", "localhost:8000")
     # JWT Variables
     JWT_SECRET_KEY: str = os.getenv(
         "JWT_SECRET_KEY", "superrrrrrrrrrrlongggggggnonnnnnnexistinggggsecretttttt"
     )
     ACCESS_TOKEN_EXPIRES_DAYS: int = int(os.getenv("ACCESS_TOKEN_EXPIRES_DAYS", 30))
-    DISABLE_PAID_SUBSCRIPTION: bool = bool(
-        os.getenv("DISABLE_PAID_SUBSCRIPTION", False)
-    )
+
+    # Postgres Variables
+    DATABASE_USER: str = os.getenv("DATABASE_USER", "postgres")
+    DATABASE_PASSWORD: str = os.getenv("DATABASE_PASSWORD", "postgres")
+    DATABASE_HOST: str = os.getenv("DATABASE_HOST", "localhost")
+    DATABASE_PORT: int = int(os.getenv("DATABASE_PORT", 5432))
+    DATABASE_NAME: str = os.getenv("DATABASE_NAME", "postgres")
+
+    # NowPayments Variables
+    NOWPAYMENTS_IPN_KEY: str = os.getenv("NOWPAYMENTS_IPN_KEY", "")
+    NOWPAYMENTS_API_KEY: str = os.getenv("NOWPAYMENTS_API_KEY", "")
+
+    HOST: str = os.getenv("HOST", "0.0.0.0")
+    PORT: int = int(os.getenv("PORT", 8000))
+
+    VIRCHUAL = bool(os.getenv("VIRCHUAL", "false"))
