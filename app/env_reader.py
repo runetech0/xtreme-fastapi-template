@@ -29,3 +29,7 @@ class EnvReader:
     PORT: int = int(os.getenv("PORT", 8000))
 
     VIRCHUAL = bool(os.getenv("VIRCHUAL", "false"))
+
+    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    REDIS_DB: int = int(os.getenv("REDIS_DB", 0))

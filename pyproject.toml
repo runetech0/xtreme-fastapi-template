@@ -6,6 +6,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "asyncpg>=0.30.0",
+    "colorama>=0.4.6",
     "dotenv>=0.9.9",
     "fastapi>=0.116.1",
     "httpx>=0.28.1",
@@ -13,7 +14,9 @@ dependencies = [
     "pydantic[email]>=2.11.7",
     "pyjwt>=2.10.1",
     "python-multipart>=0.0.20",
+    "redis>=6.4.0",
     "sqlalchemy>=2.0.43",
+    "types-colorama>=0.4.15.20250801",
     "types-passlib>=1.7.7.20250602",
     "uvicorn>=0.35.0",
 ]

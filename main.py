@@ -5,13 +5,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.env_reader import EnvReader
-from app.logger import logger
+from app.logs_config import get_logger
 from app.settings import API_DESCRIPTION, API_TITLE, API_VERSION, OPENAPI_VERSION
 from db_handles.session import init_db
 from middlewares.standard_response import (
     StandardResponseMiddleware,
     register_httpexception_handler,
 )
+from redis_handlers.client import get_new_redis_client
+from redis_handlers.dispatcher import Dispatcher
 from routes.admin_routes import admin_router
 from routes.auth_routes import auth_router
 from routes.file_routes import file_router
@@ -19,10 +21,13 @@ from routes.payment_routes import payments_router
 from routes.root_route import root_router
 from routes.user_routes import user_router
 
+logger = get_logger()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await init_db()
+    app.state.dispatcher = Dispatcher(redis=await get_new_redis_client())
     logger.info("Startup complete!")
     yield  # App is running
     logger.info("Running teardown process  ...")

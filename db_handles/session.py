@@ -3,14 +3,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 from app.env_reader import EnvReader
-from app.logger import logger
+from app.logs_config import get_logger
 
 from .base import Base
-from .trigger_queries import (
-    USER_CREATE_CREATE_TRIGGER,
-    USER_CREATE_DROP_TRIGGER,
-    USER_CREATE_NOTIFY_FUNCTION,
-)
+
+logger = get_logger()
 
 
 def get_main_db_url(include_asyncpg: bool = True) -> str:
@@ -75,15 +72,6 @@ async def ensure_database_exists(
 async def run_trigger_sql(session: AsyncSession, sql: str) -> None:
     await session.execute(text(sql))
     await session.commit()
-
-
-async def setup_user_triggers() -> None:
-    async with async_session() as session:
-        logger.info("Creating triggers for User creation")
-        await run_trigger_sql(session, USER_CREATE_NOTIFY_FUNCTION)
-        await run_trigger_sql(session, USER_CREATE_DROP_TRIGGER)
-        await run_trigger_sql(session, USER_CREATE_CREATE_TRIGGER)
-        logger.info("Triggers for User creation created")
 
 
 async def init_db() -> None:

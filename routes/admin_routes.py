@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
 
 from app.auth_service import create_access_token, get_admin_user, verify_password
-from app.logger import logger
+from app.logs_config import get_logger
 from db_handles.admin_settings import AdminSettings
 from db_handles.session import async_session
 from db_handles.user import User
@@ -12,6 +12,9 @@ from models.admin import Log, Role
 from models.admin_settings import AdminSettingsOutput, AdminSettingsUpdate
 from models.auth import UserLogin
 from models.user import UserPublic
+
+logger = get_logger()
+
 
 admin_router = APIRouter(prefix="/admin", tags=["Admin"])
 

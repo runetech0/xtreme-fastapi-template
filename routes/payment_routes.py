@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse
 
 from app.auth_service import get_current_user
 from app.env_reader import EnvReader
-from app.logger import logger
+from app.logs_config import get_logger
 from app.settings import (
     NOWPAYMENTS_API_BASE,
     NOWPAYMENTS_FEE_PAID_BY_USER,
@@ -17,6 +17,9 @@ from app.utils import np_signature_check
 from db_handles.admin_settings import AdminSettings
 from db_handles.user import User
 from models.payment import PaymentStatusUpdate
+
+logger = get_logger()
+
 
 payments_router = APIRouter(prefix="/payments", tags=["Payments"])
 
